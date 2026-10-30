@@ -1,4 +1,6 @@
 .env
+.env.demo
+.demo-credentials
 __pycache__/
 *.py[cod]
 .pytest_cache/
