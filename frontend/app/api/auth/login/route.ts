@@ -27,15 +27,25 @@ function findWorkspaceId(value: unknown): string | null {
 }
 
 export async function POST(request: Request) {
-  const apiUrl = getBackendUrl()
+  let apiUrl: string
+  try {
+    apiUrl = getBackendUrl()
+  } catch (error) {
+    return NextResponse.json({ detail: error instanceof Error ? error.message : 'Backend URL is not configured.' }, { status: 503 })
+  }
 
   const body = await request.json()
-  const response = await fetch(`${apiUrl}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    cache: 'no-store',
-  })
+  let response: Response
+  try {
+    response = await fetch(`${apiUrl}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    })
+  } catch {
+    return NextResponse.json({ detail: 'The backend could not be reached.' }, { status: 502 })
+  }
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) return NextResponse.json(payload, { status: response.status })
 

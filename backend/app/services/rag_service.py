@@ -10,7 +10,12 @@ from app.services.pinecone_service import search_text
 
 def ask(question: str, context: dict) -> dict:
     workspace_id = context["workspace"]["_id"]
-    matches = search_text(str(workspace_id), question, top_k=8)
+    # Pinecone is an enrichment source; a transient vector-service failure
+    # must not turn a valid structured workspace question into a 500.
+    try:
+        matches = search_text(str(workspace_id), question, top_k=8)
+    except Exception:
+        matches = []
     evidence = [
         {
             key: value

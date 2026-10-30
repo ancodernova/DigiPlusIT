@@ -21,13 +21,23 @@ function findWorkspaceId(value: unknown): string | null {
 }
 
 export async function POST(request: Request) {
-  const apiUrl = getBackendUrl()
-  const response = await fetch(`${apiUrl}/api/v1/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: await request.text(),
-    cache: 'no-store',
-  })
+  let apiUrl: string
+  try {
+    apiUrl = getBackendUrl()
+  } catch (error) {
+    return NextResponse.json({ detail: error instanceof Error ? error.message : 'Backend URL is not configured.' }, { status: 503 })
+  }
+  let response: Response
+  try {
+    response = await fetch(`${apiUrl}/api/v1/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: await request.text(),
+      cache: 'no-store',
+    })
+  } catch {
+    return NextResponse.json({ detail: 'The backend could not be reached.' }, { status: 502 })
+  }
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) return NextResponse.json(payload, { status: response.status })
   const token = findToken(payload)

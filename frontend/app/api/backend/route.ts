@@ -19,7 +19,12 @@ export async function DELETE(request: Request) {
 }
 
 async function forward(request: Request, method: string) {
-  const apiUrl = getBackendUrl()
+  let apiUrl: string
+  try {
+    apiUrl = getBackendUrl()
+  } catch (error) {
+    return NextResponse.json({ detail: error instanceof Error ? error.message : 'Backend URL is not configured.' }, { status: 503 })
+  }
   const path = new URL(request.url).searchParams.get('path')
   if (!path || !path.startsWith('/api/v1/')) return NextResponse.json({ detail: 'A valid /api/v1/ path is required.' }, { status: 400 })
   const requestCookies = await cookies()
@@ -30,6 +35,11 @@ async function forward(request: Request, method: string) {
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (workspaceId) headers.set('X-Workspace-ID', workspaceId)
   const body = method === 'GET' || method === 'DELETE' ? undefined : await request.text()
-  const response = await fetch(`${apiUrl}${path}`, { method, headers, body, cache: 'no-store' })
+  let response: Response
+  try {
+    response = await fetch(`${apiUrl}${path}`, { method, headers, body, cache: 'no-store' })
+  } catch {
+    return NextResponse.json({ detail: 'The backend could not be reached.' }, { status: 502 })
+  }
   return new NextResponse(response.body, { status: response.status, headers: { 'Content-Type': response.headers.get('content-type') ?? 'application/json' } })
 }
