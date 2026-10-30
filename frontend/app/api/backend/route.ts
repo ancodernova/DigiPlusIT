@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { getBackendUrl } from '@/lib/backend-url'
 
 export async function GET(request: Request) {
   return forward(request, 'GET')
@@ -18,8 +19,7 @@ export async function DELETE(request: Request) {
 }
 
 async function forward(request: Request, method: string) {
-  const configuredUrl = process.env.NEXT_PUBLIC_API_URL
-  const apiUrl = configuredUrl && !configuredUrl.includes('localhost') ? configuredUrl : 'https://backend-two-chi-77.vercel.app'
+  const apiUrl = getBackendUrl()
   const path = new URL(request.url).searchParams.get('path')
   if (!path || !path.startsWith('/api/v1/')) return NextResponse.json({ detail: 'A valid /api/v1/ path is required.' }, { status: 400 })
   const token = (await cookies()).get('contextflow_access_token')?.value

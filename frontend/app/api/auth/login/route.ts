@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getBackendUrl } from '@/lib/backend-url'
 
 function findToken(value: unknown): string | null {
   if (!value || typeof value !== 'object') return null
@@ -18,8 +19,7 @@ function findToken(value: unknown): string | null {
 }
 
 export async function POST(request: Request) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL
-  if (!apiUrl) return NextResponse.json({ detail: 'NEXT_PUBLIC_API_URL is not configured.' }, { status: 503 })
+  const apiUrl = getBackendUrl()
 
   const body = await request.json()
   const response = await fetch(`${apiUrl}/api/v1/auth/login`, {

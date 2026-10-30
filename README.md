@@ -170,8 +170,60 @@ npm install
 Copy-Item .env.example .env.local
 ```
 
-Set `NEXT_PUBLIC_API_URL` to the backend URL when it differs from the default
-local API address.
+Set the server-only `NEXT_API_URL` to the backend URL when it differs from the
+default local API address.
+
+For the deployed frontend, add this Vercel environment variable exactly:
+
+```text
+NEXT_API_URL=https://backend-two-chi-77.vercel.app
+```
+
+The value must include `https://`, and it must be configured for the Vercel
+Production environment before rebuilding and redeploying the frontend.
+
+### Vercel deployment variables
+
+Configure the frontend project in Vercel with:
+
+| Variable | Value | Environment |
+|---|---|---|
+| `NEXT_API_URL` | `https://backend-two-chi-77.vercel.app` | Production, Preview |
+
+Configure the backend deployment with:
+
+| Variable | Value |
+|---|---|
+| `FRONTEND_URL` | `https://frontend-omega-wine-55.vercel.app` |
+| `APP_ENV` | `production` |
+| `DEBUG` | `false` |
+| `MONGODB_URL` | Your MongoDB Atlas connection string |
+| `MONGODB_DATABASE` | `contextflow` |
+| `JWT_SECRET` | A new long random secret |
+| `GROQ_API_KEY` | Your Groq API key |
+| `GROQ_MODEL` | Your configured Groq model |
+| `PINECONE_API_KEY` | Your Pinecone API key |
+| `PINECONE_INDEX_NAME` | `contextflow-ai-schema` |
+| `PINECONE_NAMESPACE_PREFIX` | `contextflow` |
+| `EMBEDDING_PROVIDER` | `pinecone_inference` |
+| `EMBEDDING_MODEL` | `llama-text-embed-v2` |
+| `EMBEDDING_DIMENSIONS` | `1024` |
+
+After changing any Vercel environment variable, trigger a new deployment.
+Environment variables are injected at build/runtime; changing them without a
+redeploy does not update an already-built frontend.
+
+The backend must respond successfully at:
+
+```text
+GET https://backend-two-chi-77.vercel.app/
+GET https://backend-two-chi-77.vercel.app/health
+GET https://backend-two-chi-77.vercel.app/openapi.json
+```
+
+The `/health` endpoint must be able to reach MongoDB Atlas. If it returns an
+error, fix the backend deployment and MongoDB network access before testing the
+frontend.
 
 ## Start the application
 

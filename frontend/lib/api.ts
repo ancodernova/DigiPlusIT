@@ -1,6 +1,7 @@
 export type ApiState = 'connected' | 'pending'
 
-export const apiState: ApiState = process.env.NEXT_PUBLIC_API_URL ? 'connected' : 'pending'
+// The backend URL is intentionally server-only. Browser requests use the same-origin proxy.
+export const apiState: ApiState = 'connected'
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   if (!path.startsWith('/api/v1/')) throw new Error('API paths must use the /api/v1/ prefix.')
