@@ -1,41 +1,131 @@
 # ContextFlow AI
 
-ContextFlow AI is a workspace-scoped meeting intelligence application. It captures
-meeting transcripts, preserves decisions, manages follow-up tasks, indexes knowledge,
-and provides grounded workspace questions with source citations.
+ContextFlow AI is a workspace-scoped meeting intelligence platform that turns
+conversation into searchable context, accountable work, and grounded team
+continuity.
 
-The repository contains:
+## Live application
 
-- `backend/` - FastAPI, MongoDB Atlas, Groq, and Pinecone services.
-- `frontend/` - Next.js application and browser end-to-end tests.
-- `runtime-validation-report.md` - the latest validation evidence and known limitations.
+**Frontend:** [frontend-omega-wine-55.vercel.app](http://frontend-omega-wine-55.vercel.app/)
 
-## Current status
+## What I built
 
-The current implementation is wired end to end for the primary application flows:
+### Meeting intelligence
 
-- Authentication and JWT-protected workspace access.
-- Workspace-scoped meetings, transcripts, decisions, tasks, and knowledge documents.
-- Context Passport retrieval.
-- Pinecone schema index integration and grounded RAG citations.
-- Demo workspace seeding with deterministic, idempotent records.
-- Live API smoke tests and Playwright browser tests.
+- Meeting creation and workspace-scoped meeting management.
+- Transcript capture through pasted text and supported file uploads.
+- Support for TXT, Markdown, VTT, SRT, DOCX, and PDF transcript files.
+- Consent-aware transcript processing.
+- Meeting participants, summaries, decisions, action items, and analysis.
+- Deterministic transcript chunking and source references.
 
-The latest verified results are:
+### Workspace collaboration
 
-| Check | Result |
-|---|---:|
-| Backend pytest suite | 8 passed |
-| Backend compilation | Passed |
-| Live backend API E2E suites | 3 passed |
-| Frontend TypeScript check | Passed |
-| Frontend production build | Passed |
-| Playwright browser suite | 3 passed |
-| Pinecone demo records | 45 indexed |
+- JWT-based registration, login, and protected API access.
+- Workspace membership and active workspace selection.
+- Role-aware access for administrators, managers, and members.
+- Teams, team members, user profiles, notifications, and activity records.
+- Strict tenant isolation across MongoDB records and Pinecone namespaces.
 
-See [runtime-validation-report.md](./runtime-validation-report.md) for the exact
-scope of these checks. Docker-dependent checks were not run because Docker was
-unavailable in the validation environment.
+### Task and decision management
+
+- Task creation, assignment, priorities, statuses, deadlines, and blockers.
+- Task history and status transitions.
+- Carry-forward support that preserves the original task ID and prevents
+  duplicate tasks.
+- Decision and AI-suggestion approval workflows.
+- Dashboard metrics for meetings, open work, completed work, and blocked work.
+
+### Context Passports
+
+- Context Passport generation from workspace meetings, decisions, tasks, and
+  knowledge.
+- Passport retrieval by workspace.
+- Markdown export for handovers and continuity between team members.
+
+### Knowledge base
+
+- Workspace knowledge document creation, retrieval, update, deletion, and search.
+- Knowledge documents linked to meeting and workspace context.
+- Automatic indexing and cleanup when source documents change or are removed.
+
+### Pinecone semantic search and RAG
+
+- Pinecone integrated-inference index using `llama-text-embed-v2`.
+- 1024-dimensional embeddings with cosine similarity.
+- Schema fields for `title` and `chunk_text`.
+- Allowlisted metadata for workspace, meeting, transcript, document, task,
+  source, chunk, timestamp, speaker, and text references.
+- Deterministic vector IDs for idempotent indexing and re-indexing.
+- Workspace-derived namespaces to prevent cross-tenant retrieval.
+- Semantic retrieval combined with structured MongoDB task evidence.
+- Groq-grounded answers with source citations.
+- Insufficient-evidence responses instead of fabricated answers.
+
+### AI and transcription services
+
+- Groq meeting analysis and workspace question answering.
+- Groq Whisper audio transcription support.
+- Independent embedding-service abstraction.
+- Explicit provider error handling for unavailable AI services.
+- Background indexing jobs with `pending`, `processing`, `completed`, and
+  `failed` states.
+
+### Frontend application
+
+The Next.js frontend includes:
+
+- Authentication and registration screens.
+- Workspace dashboard.
+- Meetings list, search, capture, transcript, and analysis surfaces.
+- Tasks and knowledge base views.
+- Ask Workspace interface with answer citations.
+- Context Passport screens.
+- Activity, settings, profile, security, team, and integration views.
+- Responsive navigation and shared application shell.
+- HttpOnly authentication cookie handling through server-side API proxies.
+
+### Demo workspace
+
+An idempotent demo seed script creates an isolated fictional workspace with:
+
+- 7 fictional users and workspace memberships.
+- 3 teams.
+- 8 meetings and transcripts.
+- Meeting summaries and approved decisions.
+- 24 tasks with varied statuses, priorities, deadlines, blockers, and
+  carry-forward examples.
+- Knowledge documents, activity logs, notifications, and a Context Passport.
+- 45 Pinecone records indexed from demo workspace content.
+
+The primary demo email is:
+
+```text
+asmiya.sayyed@contextflowdemo.com
+```
+
+The generated demo password is stored locally in the ignored file
+`backend/.demo-credentials`.
+
+## Architecture
+
+```text
+Next.js frontend
+        |
+        v
+FastAPI REST API
+   |          |          |
+   v          v          v
+MongoDB     Groq      Pinecone
+records     AI        semantic index
+```
+
+- MongoDB stores users, workspaces, meetings, transcripts, tasks, decisions,
+  documents, indexing jobs, activity, notifications, and passports.
+- Pinecone stores searchable transcript and workspace-context chunks.
+- Groq performs meeting analysis, grounded answer generation, and audio
+  transcription.
+- The frontend communicates with the backend through authenticated API routes.
 
 ## Prerequisites
 
@@ -113,13 +203,10 @@ npm run build
 npm run start
 ```
 
-## Demo workspace
+## Seed the demo workspace
 
-The demo seed creates a separate workspace with fictional users, teams, meetings,
-transcripts, decisions, tasks, knowledge documents, activity records,
-notifications, and a Context Passport. It is designed to be safely rerun:
-MongoDB IDs and Pinecone record IDs are deterministic, and the seed only writes
-to the dedicated demo workspace.
+The demo seed is safely rerunnable. MongoDB IDs and Pinecone record IDs are
+deterministic, and writes are restricted to the dedicated demo workspace.
 
 Run it from `backend/`:
 
@@ -135,13 +222,9 @@ python scripts/seed_demo.py --skip-pinecone
 
 The local demo password is generated and stored in the ignored file
 `backend/.demo-credentials`. Do not copy that password into source control or
-public documentation. The primary demo email is:
+public documentation.
 
-```text
-asmiya.sayyed@contextflowdemo.com
-```
-
-## Pinecone and RAG
+## Pinecone configuration
 
 The active Pinecone index is a document index configured with:
 
@@ -188,7 +271,7 @@ evidence instead of fabricating an answer.
 Groq Whisper is used for speech-to-text only. It is not used as an embedding
 provider.
 
-## Main API routes
+## API route groups
 
 All routes are under `/api/v1`.
 
@@ -254,35 +337,23 @@ workspace or test database.
   health/status endpoints.
 - Demo data is isolated by a dedicated workspace marker and deterministic IDs.
 
-## Troubleshooting
+## Validation
 
-### Backend cannot connect
+The completed implementation was validated with:
 
-Check `MONGODB_URL`, database network access rules, and whether the selected
-MongoDB database is reachable from the current machine. Confirm that the
-configured JWT secret is non-empty before starting the API.
+| Check | Result |
+|---|---:|
+| Backend pytest suite | 8 passed |
+| Backend Python compilation | Passed |
+| Live backend API E2E suites | 3 passed |
+| Frontend TypeScript check | Passed |
+| Frontend production build | Passed |
+| Playwright browser suite | 3 passed |
+| Pinecone demo indexing | 45 records |
 
-### Pinecone schema or dimension mismatch
-
-The Pinecone schema is fixed when an integrated index is created. Do not delete
-or recreate an existing production index automatically. Verify the configured
-index name, integrated model, dimension, metric, and schema fields using the
-protected Pinecone diagnostic endpoint.
-
-### Groq is unavailable
-
-AI endpoints return explicit service errors when Groq is not configured or
-temporarily unavailable. Core workspace CRUD operations do not require Groq.
-
-### Frontend cannot reach the API
-
-Confirm that the backend is running on the URL configured in
-`frontend/.env.local`, then sign in again so the HttpOnly authentication cookie
-is present.
-
-## Project documentation
+## Related documentation
 
 - Backend-specific setup and Pinecone details: [backend/README.md](./backend/README.md)
-- Validation evidence and known gaps: [runtime-validation-report.md](./runtime-validation-report.md)
+- Validation evidence: [runtime-validation-report.md](./runtime-validation-report.md)
 - Example backend environment: [backend/.env.example](./backend/.env.example)
 - Example frontend environment: [frontend/.env.example](./frontend/.env.example)
