@@ -1,28 +1,45 @@
-"""Database engine and session configuration."""
 
-from collections.abc import Generator
+from pymongo import MongoClient
+from pymongo.database import Database
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-
-from .config import get_settings
+from app.config import settings
 
 
-class Base(DeclarativeBase):
-    """Base class for SQLAlchemy models."""
+class MongoDB:
+    client: MongoClient | None = None
+    database: Database | None = None
 
 
-settings = get_settings()
-connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
-engine = create_engine(settings.database_url, connect_args=connect_args)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+mongodb = MongoDB()
 
 
-def get_db() -> Generator[Session, None, None]:
-    """Yield a database session and close it after use."""
+def connect_to_mongodb():
+    """Establish a connection to MongoDB Atlas."""
+    mongodb.client = MongoClient(
+        settings.MONGODB_URL,
+        serverSelectionTimeoutMS=10000,
+        connectTimeoutMS=10000,
+        appname="ContextFlowAI"
+    )
 
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    # Verify connectivity immediately.
+    mongodb.client.admin.command("ping")
+
+    mongodb.database = mongodb.client[settings.MONGODB_DATABASE]
+
+    print("Connected to MongoDB Atlas successfully!")
+
+
+def close_mongodb_connection():
+    """Close MongoDB connection."""
+    if mongodb.client:
+        mongodb.client.close()
+        mongodb.client = None
+        mongodb.database = None
+
+
+def get_database() -> Database:
+    if mongodb.database is None:
+        raise RuntimeError("MongoDB is not connected.")
+
+    return mongodb.database

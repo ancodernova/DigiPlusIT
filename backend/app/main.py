@@ -1,28 +1,69 @@
-"""FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
-from typing import Any
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from .config import get_settings
-from .init_db import init_db
+from app.config import settings
+from app.database import (
+    connect_to_mongodb,
+    close_mongodb_connection,
+    get_database
+)
+from app.init_db import initialize_database
+from app.core.logging import configure_logging
+from app.api.v1.router import api_router
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
-    """Initialize application resources during startup."""
+async def lifespan(app: FastAPI):
+    configure_logging()
 
-    init_db()
+    connect_to_mongodb()
+    initialize_database()
+
     yield
 
-
-settings = get_settings()
-app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
+    close_mongodb_connection()
 
 
-@app.get("/health", tags=["system"])
-def health_check() -> dict[str, Any]:
-    """Return the service health status."""
+# 1. Create the FastAPI application FIRST
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="AI-powered organizational knowledge continuity platform",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
-    return {"status": "ok", "service": settings.app_name}
+
+# 2. Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+
+# 3. Register API routes AFTER app creation
+app.include_router(api_router)
+
+
+# 4. Basic endpoints
+@app.get("/")
+def root():
+    return {
+        "application": "ContextFlow AI",
+        "status": "running"
+    }
+
+
+@app.get("/health")
+def health():
+    get_database().command("ping")
+
+    return {
+        "status": "healthy",
+        "database": "connected"
+    }
