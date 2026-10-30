@@ -18,6 +18,14 @@ function findToken(value: unknown): string | null {
   return null
 }
 
+function findWorkspaceId(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const workspace = (value as { workspace?: { _id?: unknown; id?: unknown } }).workspace
+  if (!workspace || typeof workspace !== 'object') return null
+  const id = workspace._id ?? workspace.id
+  return typeof id === 'string' ? id : null
+}
+
 export async function POST(request: Request) {
   const apiUrl = getBackendUrl()
 
@@ -33,6 +41,7 @@ export async function POST(request: Request) {
 
   const token = findToken(payload)
   if (!token) return NextResponse.json({ detail: 'Login succeeded but no access token was returned by the backend.' }, { status: 502 })
+  const workspaceId = findWorkspaceId(payload)
 
   const result = NextResponse.json({ user: payload.user ?? payload.data?.user ?? null })
   result.cookies.set('contextflow_access_token', token, {
@@ -42,5 +51,14 @@ export async function POST(request: Request) {
     path: '/',
     maxAge: 60 * 60 * 8,
   })
+  if (workspaceId) {
+    result.cookies.set('contextflow_workspace_id', workspaceId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 8,
+    })
+  }
   return result
 }
