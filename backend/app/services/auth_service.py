@@ -99,18 +99,33 @@ def login_user(data):
     if not user.get("is_active", False):
         raise HTTPException(403, "Account is disabled")
 
-    membership = db.workspace_members.find_one({
+    memberships = list(db.workspace_members.find({
         "user_id": user["_id"],
         "is_active": True
-    })
+    }).sort("joined_at", -1))
 
-    if not membership:
+    if not memberships:
         raise HTTPException(403, "No active workspace found")
 
-    workspace = db.workspaces.find_one({
-        "_id": membership["workspace_id"],
-        "is_active": True
-    })
+    workspace_ids = [membership["workspace_id"] for membership in memberships]
+    workspaces = {
+        workspace["_id"]: workspace
+        for workspace in db.workspaces.find({
+            "_id": {"$in": workspace_ids},
+            "is_active": True
+        })
+    }
+
+    # Prefer the user's own workspace over an invited workspace. Membership
+    # order is only used as a deterministic fallback for shared workspaces.
+    membership = next(
+        (
+            item for item in memberships
+            if workspaces.get(item["workspace_id"], {}).get("created_by") == user["_id"]
+        ),
+        next((item for item in memberships if item["workspace_id"] in workspaces), None),
+    )
+    workspace = workspaces.get(membership["workspace_id"]) if membership else None
 
     if not workspace:
         raise HTTPException(403, "Workspace unavailable")
