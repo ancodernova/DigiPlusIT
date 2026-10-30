@@ -6,7 +6,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.config import settings
-from app.core.dependencies import get_current_workspace
+from app.core.dependencies import get_current_workspace, require_roles
 from app.core.serialization import serialize_document
 from app.database import get_database
 from app.schemas.ai import MeetingAnalysisRequest, MeetingApproval, WorkspaceQuestion
@@ -52,6 +52,10 @@ def analyze_meeting(data: MeetingAnalysisRequest, context=Depends(get_current_wo
 
 @router.post("/workspace/ask")
 def ask_workspace(data: WorkspaceQuestion, context=Depends(get_current_workspace)):
+    from app.services.pinecone_service import configured
+    if configured():
+        from app.services.rag_service import ask
+        return ask(data.question, context)
     db, workspace_id = get_database(), context["workspace"]["_id"]
     records = list(db.meetings.find({"workspace_id": workspace_id}).sort("meeting_date", -1).limit(10))
     records += list(db.tasks.find({"workspace_id": workspace_id}).sort("updated_at", -1).limit(20))
@@ -63,7 +67,7 @@ def ask_workspace(data: WorkspaceQuestion, context=Depends(get_current_workspace
 
 
 @router.post("/meetings/{meeting_id}/approve")
-def approve_meeting(meeting_id: str, data: MeetingApproval, context=Depends(get_current_workspace)):
+def approve_meeting(meeting_id: str, data: MeetingApproval, context=Depends(require_roles("admin", "manager"))):
     if data.meeting_id != meeting_id:
         raise HTTPException(400, "Meeting ID does not match request path")
     meeting_service.get_meeting(meeting_id, context)

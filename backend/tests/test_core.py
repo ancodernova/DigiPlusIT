@@ -4,6 +4,8 @@ from bson import ObjectId
 
 from app.core.serialization import serialize_document
 from app.services.context_passport_service import markdown
+from app.api.v1.ai import _ask_groq
+from fastapi import HTTPException
 
 
 def test_serialization_converts_mongodb_values():
@@ -29,3 +31,13 @@ def test_context_passport_markdown_contains_sources():
     assert "# Release handover" in result
     assert "Finish runbook" in result
     assert "Schedule review" in result
+
+
+def test_ai_provider_failure_is_explicit(monkeypatch):
+    monkeypatch.setattr("app.api.v1.ai.settings.GROQ_API_KEY", "")
+    try:
+        _ask_groq("test")
+    except HTTPException as exc:
+        assert exc.status_code == 503
+    else:
+        raise AssertionError("Expected an explicit 503 when Groq is unavailable")

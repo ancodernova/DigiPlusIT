@@ -80,7 +80,7 @@ def list_members(context=Depends(get_current_workspace)):
 
 
 @router.post("/members", status_code=201)
-def add_member(data: MemberAdd, context=Depends(require_roles("admin", "manager"))):
+def add_member(data: MemberAdd, context=Depends(require_roles("admin"))):
     db, email = get_database(), data.email.lower().strip()
     user = db.users.find_one({"email": email, "is_active": True})
     if not user:

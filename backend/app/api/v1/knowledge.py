@@ -9,6 +9,7 @@ from app.core.serialization import serialize_document
 from app.database import get_database
 from app.schemas.task import KnowledgeDocumentCreate
 from app.schemas.knowledge import KnowledgeDocumentUpdate, KnowledgeLinkRequest
+from app.services.indexing_service import index_record, mark_indexing_failed, remove_record
 
 router = APIRouter(prefix="/knowledge", tags=["Knowledge"])
 
@@ -18,6 +19,11 @@ def create_document(data: KnowledgeDocumentCreate, context=Depends(get_current_w
     now = datetime.now(timezone.utc)
     document = {**data.model_dump(), "workspace_id": context["workspace"]["_id"], "uploaded_by": context["user"]["_id"], "created_at": now, "updated_at": now}
     result = get_database().knowledge_documents.insert_one(document)
+    saved = get_database().knowledge_documents.find_one({"_id": result.inserted_id})
+    try:
+        index_record("knowledge_documents", saved, saved["content"], "knowledge_document")
+    except Exception as exc:
+        mark_indexing_failed("knowledge_documents", result.inserted_id, exc)
     return serialize_document(get_database().knowledge_documents.find_one({"_id": result.inserted_id}))
 
 
@@ -38,7 +44,12 @@ def get_document(document_id: str, context=Depends(get_current_workspace)):
 
 @router.delete("/{document_id}")
 def delete_document(document_id: str, context=Depends(get_current_workspace)):
-    result = get_database().knowledge_documents.delete_one({"_id": object_id(document_id, "document ID"), "workspace_id": context["workspace"]["_id"]})
+    db = get_database()
+    existing = db.knowledge_documents.find_one({"_id": object_id(document_id, "document ID"), "workspace_id": context["workspace"]["_id"]})
+    if not existing:
+        raise HTTPException(404, "Knowledge document not found")
+    remove_record("knowledge_documents", existing)
+    result = db.knowledge_documents.delete_one({"_id": existing["_id"]})
     if not result.deleted_count: raise HTTPException(404, "Knowledge document not found")
     return {"deleted": True}
 
@@ -56,6 +67,11 @@ def update_document(document_id: str, data: KnowledgeDocumentUpdate, context=Dep
     result = db.knowledge_documents.update_one({"_id": object_id(document_id, "document ID"), "workspace_id": context["workspace"]["_id"]}, {"$set": updates})
     if not result.matched_count:
         raise HTTPException(404, "Knowledge document not found")
+    saved = db.knowledge_documents.find_one({"_id": object_id(document_id)})
+    try:
+        index_record("knowledge_documents", saved, saved["content"], "knowledge_document")
+    except Exception as exc:
+        mark_indexing_failed("knowledge_documents", saved["_id"], exc)
     return get_document(document_id, context)
 
 

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query
 
-from app.core.dependencies import get_current_workspace
+from app.core.dependencies import get_current_workspace, require_roles
 from app.schemas.task import CarryForwardRequest, TaskCreate, TaskUpdate
 from app.services import task_service
 
@@ -15,7 +15,7 @@ def list_tasks(context=Depends(get_current_workspace), task_status: str | None =
 
 
 @router.post("/", status_code=201)
-def create_task(data: TaskCreate, context=Depends(get_current_workspace)):
+def create_task(data: TaskCreate, context=Depends(require_roles("admin", "manager"))):
     return task_service.create_task(data, context)
 
 

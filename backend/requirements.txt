@@ -27,3 +27,6 @@ python-json-logger
 # Testing
 pytest
 pytest-asyncio
+python-docx
+pypdf
+pinecone

@@ -9,6 +9,9 @@ from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.workspaces import router as workspaces_router
 from app.api.v1.context_passports import router as passports_router
 from app.api.v1.activity import router as activity_router
+from app.api.v1.transcripts import router as transcripts_router
+from app.api.v1.live_sessions import router as live_sessions_router
+from app.api.v1.pinecone import router as pinecone_router
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -21,3 +24,6 @@ api_router.include_router(ai_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(passports_router)
 api_router.include_router(activity_router)
+api_router.include_router(transcripts_router)
+api_router.include_router(live_sessions_router)
+api_router.include_router(pinecone_router)

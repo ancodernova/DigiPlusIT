@@ -18,6 +18,11 @@ COLLECTIONS = [
     "context_passports",
     "activity_logs",
     "notifications",
+    "transcripts",
+    "transcript_jobs",
+    "live_sessions",
+    "ai_suggestions",
+    "indexing_jobs",
 ]
 
 
@@ -130,6 +135,18 @@ def initialize_database():
     db.notifications.create_index(
         [("user_id", ASCENDING), ("created_at", DESCENDING)]
     )
+
+    for collection in ("transcripts", "transcript_jobs", "live_sessions", "ai_suggestions"):
+        db[collection].create_index([("workspace_id", ASCENDING), ("created_at", DESCENDING)])
+    db.transcripts.create_index([("workspace_id", ASCENDING), ("content_hash", ASCENDING)], unique=True, sparse=True, name="unique_transcript_content")
+    db.transcript_jobs.create_index([("workspace_id", ASCENDING), ("status", ASCENDING)])
+    db.live_sessions.create_index([("workspace_id", ASCENDING), ("meeting_id", ASCENDING), ("created_at", DESCENDING)])
+    db.indexing_jobs.create_index(
+        [("workspace_id", ASCENDING), ("source_id", ASCENDING)],
+        unique=True,
+        name="unique_workspace_source_index_job",
+    )
+    db.indexing_jobs.create_index([("status", ASCENDING), ("updated_at", ASCENDING)])
 
     db.notifications.create_index(
         [("user_id", ASCENDING), ("read", ASCENDING)]

@@ -9,6 +9,7 @@ from app.core.dependencies import object_id
 from app.core.serialization import serialize_document
 from app.database import get_database
 from app.services.activity_service import record_activity
+from app.services.indexing_service import index_record, mark_indexing_failed
 
 
 def _meeting(db, meeting_id: str, workspace_id: ObjectId) -> dict:
@@ -75,6 +76,11 @@ def add_decision(meeting_id, data, context):
     _meeting(db, meeting_id, context["workspace"]["_id"])
     decision = {"workspace_id": context["workspace"]["_id"], "meeting_id": object_id(meeting_id), "title": data.title, "description": data.description, "created_by": context["user"]["_id"], "created_at": now}
     result = db.decisions.insert_one(decision)
+    saved = db.decisions.find_one({"_id": result.inserted_id})
+    try:
+        index_record("decisions", saved, f"{saved['title']}\n{saved['description']}", "decision")
+    except Exception as exc:
+        mark_indexing_failed("decisions", saved["_id"], exc)
     return serialize_document(db.decisions.find_one({"_id": result.inserted_id}))
 
 

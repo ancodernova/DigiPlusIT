@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from app.core.dependencies import object_id
 from app.core.serialization import serialize_document
 from app.database import get_database
+from app.services.indexing_service import index_record, mark_indexing_failed
 
 
 def generate_passport(data, context):
@@ -32,6 +33,11 @@ def generate_passport(data, context):
     }
     doc = {"workspace_id": workspace_id, "title": data.title, "content": content, "source_meeting_ids": [x["_id"] for x in meetings], "source_task_ids": [x["_id"] for x in tasks], "generated_by": context["user"]["_id"], "created_at": now}
     result = db.context_passports.insert_one(doc)
+    saved = db.context_passports.find_one({"_id": result.inserted_id})
+    try:
+        index_record("context_passports", saved, str(content), "context_passport")
+    except Exception as exc:
+        mark_indexing_failed("context_passports", saved["_id"], exc)
     return serialize_document(db.context_passports.find_one({"_id": result.inserted_id}))
 
 

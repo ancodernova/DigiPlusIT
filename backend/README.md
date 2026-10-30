@@ -29,6 +29,44 @@ OpenAPI documentation is available at `/docs`.
 - `/api/v1/knowledge` — workspace documents and text search
 - `/api/v1/ai` — meeting analysis and workspace questions
 - `/api/v1/dashboard` — metrics and deterministic risk lists
+- `/api/v1/transcripts` — paste and file transcript ingestion with polling jobs
+- `/api/v1/meetings/{meeting_id}/live-sessions` — consent-aware local mock session lifecycle
+
+## Transcript and live capture configuration
+
+TXT, VTT, SRT, DOCX, and PDF uploads are extracted locally. Audio uploads use Groq's
+multipart transcription endpoint with `GROQ_TRANSCRIPTION_MODEL` (normally
+`whisper-large-v3-turbo`). The configured upload limit defaults to 25 MB. Files are
+stored under `LOCAL_STORAGE_PATH` for local development and are excluded from git.
+
+The `mock` live-session provider is available for local workflow testing only. Zoom,
+Google Meet, and Microsoft Teams require an authorized provider integration, OAuth or
+bot credentials, webhook validation, and consent; they intentionally return a
+configuration error until those adapters are implemented.
+
+## Pinecone and grounded RAG
+
+Pinecone indexing is configuration-gated through `PINECONE_*` and uses the independent
+embedding service. The configured index is a Pinecone document index using the integrated
+`llama-text-embed-v2` model, 1024 dimensions, cosine similarity, and `title`/`chunk_text`
+fields. Do not recreate the index automatically. If creating a new index, obtain its
+dimension from the selected embedding provider and verify it before writing.
+
+Set `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`, `PINECONE_NAMESPACE_PREFIX`,
+`EMBEDDING_PROVIDER`, and `EMBEDDING_MODEL`. Namespaces are derived only from the
+authenticated workspace membership (`<prefix>:<workspace_id>`); client and LLM supplied
+workspace IDs are not used for retrieval. Transcript, meeting decision, task, knowledge
+document, and Context Passport text is chunked into deterministic IDs. Indexing status is
+persisted as pending/processing/completed/failed in MongoDB and a record is marked complete
+only after Pinecone confirms the upsert.
+
+`/api/v1/ai/workspace/ask` performs semantic retrieval plus structured task queries and
+returns citations. Retrieved content is treated as untrusted evidence. If no semantic
+evidence is found, the response marks `insufficient_evidence`.
+
+Whisper is speech-to-text, not an embedding provider. Pinecone document search performs
+query embedding inside the configured document index; the embedding service remains
+available for provider health checks, batch generation, and vector-index deployments.
 
 Protected workspace routes use a bearer token and optionally an `X-Workspace-ID` header. The first active workspace is selected when that header is omitted.
 
