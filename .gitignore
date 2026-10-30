@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+myenv/
+__pycache__/
+.pytest_cache/
+*.pyc
+logs/
+node_modules/
+.next/

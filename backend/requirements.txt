@@ -1,0 +1,29 @@
+
+# API framework
+fastapi
+uvicorn[standard]
+
+# MongoDB
+pymongo[srv]
+
+# Configuration and validation
+pydantic
+pydantic-settings
+python-dotenv
+email-validator
+
+# Authentication and security
+bcrypt
+PyJWT
+python-multipart
+
+# AI integration
+groq
+
+# HTTP and utilities
+httpx
+python-json-logger
+
+# Testing
+pytest
+pytest-asyncio
