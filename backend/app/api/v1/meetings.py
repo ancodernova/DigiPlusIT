@@ -19,7 +19,7 @@ def list_meetings(context=Depends(get_current_workspace), skip: int = 0, limit: 
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def create_meeting(data: MeetingCreate, context=Depends(require_roles("admin", "manager"))):
+def create_meeting(data: MeetingCreate, context=Depends(get_current_workspace)):
     return meeting_service.create_meeting(data, context)
 
 

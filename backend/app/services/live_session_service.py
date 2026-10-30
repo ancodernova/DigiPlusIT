@@ -37,6 +37,15 @@ def get_session(meeting_id, session_id, context):
     return serialize_document(item)
 
 
+def list_sessions(meeting_id, context):
+    meeting = object_id(meeting_id, "meeting ID")
+    items = get_database().live_sessions.find({
+        "meeting_id": meeting,
+        "workspace_id": context["workspace"]["_id"],
+    }).sort("created_at", -1)
+    return [serialize_document(item) for item in items]
+
+
 def stop_session(meeting_id, session_id, context):
     db = get_database()
     get_session(meeting_id, session_id, context)

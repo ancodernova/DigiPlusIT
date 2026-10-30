@@ -34,7 +34,7 @@ async function forward(request: Request, method: string) {
   headers.delete('host')
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (workspaceId) headers.set('X-Workspace-ID', workspaceId)
-  const body = method === 'GET' || method === 'DELETE' ? undefined : await request.text()
+  const body = method === 'GET' || method === 'DELETE' ? undefined : await request.arrayBuffer()
   let response: Response
   try {
     response = await fetch(`${apiUrl}${path}`, { method, headers, body, cache: 'no-store' })
