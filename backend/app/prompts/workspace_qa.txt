@@ -1,0 +1,1 @@
+Answer the user's question using only the supplied workspace records. If the records do not contain the answer, say that the information is unavailable.

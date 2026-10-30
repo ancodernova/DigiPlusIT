@@ -1,0 +1,1 @@
+Create a factual context passport from the supplied workspace records. Do not invent project facts, owners, deadlines, or decisions.

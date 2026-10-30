@@ -1,0 +1,1 @@
+Analyze the supplied meeting notes as JSON. Use only facts in the notes. Unknown owners and dates must be null.

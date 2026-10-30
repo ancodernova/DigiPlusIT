@@ -11,18 +11,20 @@ class Settings(BaseSettings):
 
     FRONTEND_URL: str = "http://localhost:3000"
 
-    MONGODB_URL: str
+    MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DATABASE: str = "contextflow"
 
-    JWT_SECRET: str
+    JWT_SECRET: str = "change-this-secret-in-production"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     
 
-    GROQ_API_KEY: str
-    GROQ_MODEL: str
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.1-8b-instant"
+    GROQ_FALLBACK_MODEL: str = ""
 
     LOG_LEVEL: str = "INFO"
+    REQUEST_TIMEOUT_SECONDS: float = 30.0
 
     model_config = SettingsConfigDict(
         env_file=".env",

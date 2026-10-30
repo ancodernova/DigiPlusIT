@@ -13,6 +13,8 @@ from app.database import (
 from app.init_db import initialize_database
 from app.core.logging import configure_logging
 from app.api.v1.router import api_router
+from app.core.exceptions import unhandled_exception_handler
+from app.core.middleware import RequestIdMiddleware
 
 
 @asynccontextmanager
@@ -34,6 +36,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+app.add_exception_handler(Exception, unhandled_exception_handler)
+app.add_middleware(RequestIdMiddleware)
 
 
 # 2. Configure CORS

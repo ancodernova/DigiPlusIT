@@ -1,6 +1,6 @@
 
 from bson import ObjectId
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.database import get_database
@@ -40,14 +40,17 @@ def get_current_user(
 
 
 def get_current_workspace(
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    workspace_header: str | None = Header(default=None, alias="X-Workspace-ID"),
 ):
     db = get_database()
 
-    membership = db.workspace_members.find_one({
-        "user_id": current_user["_id"],
-        "is_active": True
-    })
+    query = {"user_id": current_user["_id"], "is_active": True}
+    if workspace_header:
+        if not ObjectId.is_valid(workspace_header):
+            raise HTTPException(status_code=400, detail="Invalid workspace ID")
+        query["workspace_id"] = ObjectId(workspace_header)
+    membership = db.workspace_members.find_one(query)
 
     if not membership:
         raise HTTPException(
@@ -71,3 +74,18 @@ def get_current_workspace(
         "workspace": workspace,
         "membership": membership
     }
+
+
+def require_roles(*roles: str):
+    def dependency(context: dict = Depends(get_current_workspace)):
+        if context["membership"].get("role") not in roles:
+            raise HTTPException(status_code=403, detail="Insufficient workspace permissions")
+        return context
+
+    return dependency
+
+
+def object_id(value: str, label: str = "ID") -> ObjectId:
+    if not ObjectId.is_valid(value):
+        raise HTTPException(status_code=400, detail=f"Invalid {label}")
+    return ObjectId(value)

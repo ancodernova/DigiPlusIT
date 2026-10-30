@@ -1,27 +1,18 @@
-from bson import ObjectId
-from datetime import datetime, date
+"""MongoDB document serialization helpers."""
+
+from datetime import date, datetime
 from typing import Any
 
+from bson import ObjectId
 
-def serialize_document(document: dict) -> dict:
-    result = {}
 
-    for key, value in document.items():
-        if isinstance(value, ObjectId):
-            result[key] = str(value)
-        elif isinstance(value, (datetime, date)):
-            result[key] = value.isoformat()
-        elif isinstance(value, list):
-            result[key] = [
-                serialize_document(item)
-                if isinstance(item, dict)
-                else str(item) if isinstance(item, ObjectId)
-                else item
-                for item in value
-            ]
-        elif isinstance(value, dict):
-            result[key] = serialize_document(value)
-        else:
-            result[key] = value
-
-    return result
+def serialize_document(value: Any) -> Any:
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, list):
+        return [serialize_document(item) for item in value]
+    if isinstance(value, dict):
+        return {key: serialize_document(item) for key, item in value.items()}
+    return value

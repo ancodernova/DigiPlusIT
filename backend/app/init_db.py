@@ -90,6 +90,11 @@ def initialize_database():
         [("source_meeting_id", ASCENDING)]
     )
 
+    db.tasks.create_index(
+        [("title", TEXT), ("description", TEXT)],
+        name="task_search_index"
+    )
+
     # TASK HISTORY
     db.task_history.create_index(
         [("task_id", ASCENDING), ("created_at", DESCENDING)]
