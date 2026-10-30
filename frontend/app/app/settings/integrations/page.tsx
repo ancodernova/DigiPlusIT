@@ -1,0 +1,2 @@
+import { AppShell, PageHeading, PendingCard } from '@/components/contextflow-app'
+export default function IntegrationSettingsPage(){return <AppShell active="Settings"><div className="dashboard-content max-w-5xl"><PageHeading eyebrow="Settings / Integrations" title="Integrations" description="Connect meeting providers and keep workspace intelligence synchronized."/><div className="mt-8"><PendingCard title="Integration controls are ready for API wiring"/></div></div></AppShell>}

@@ -1,0 +1,2 @@
+import { AppShell, PageHeading, PendingCard } from '@/components/contextflow-app'
+export default function ProfileSettingsPage(){return <AppShell active="Settings"><div className="dashboard-content max-w-5xl"><PageHeading eyebrow="Settings / Profile" title="Profile" description="Manage your name, email, and workspace preferences."/><div className="mt-8"><PendingCard title="Profile controls are ready for API wiring"/></div></div></AppShell>}

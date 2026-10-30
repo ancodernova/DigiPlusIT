@@ -1,0 +1,2 @@
+import { AppShell, PageHeading, PendingCard } from '@/components/contextflow-app'
+export default function SecuritySettingsPage(){return <AppShell active="Settings"><div className="dashboard-content max-w-5xl"><PageHeading eyebrow="Settings / Security" title="Sign-in & security" description="Review active sessions, password access, and protected workspace controls."/><div className="mt-8"><PendingCard title="Security controls are ready for API wiring"/></div></div></AppShell>}

@@ -47,9 +47,12 @@ configuration error until those adapters are implemented.
 ## Pinecone and grounded RAG
 
 Pinecone indexing is configuration-gated through `PINECONE_*` and uses the independent
-embedding service. The configured index is a Pinecone document index using the integrated
+embedding service. The configured index is `contextflow-ai-schema`, a Pinecone document index using the integrated
 `llama-text-embed-v2` model, 1024 dimensions, cosine similarity, and `title`/`chunk_text`
-fields. Do not recreate the index automatically. If creating a new index, obtain its
+fields. Those two fields are the index schema; the remaining source identifiers are
+allowlisted metadata (`workspace_id`, `meeting_id`, `transcript_id`, `document_id`,
+`task_id`, `source_type`, `source_id`, `chunk_id`, `timestamp`, `speaker`, and
+`text_reference`). Do not recreate the index automatically. If creating a new index, obtain its
 dimension from the selected embedding provider and verify it before writing.
 
 Set `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`, `PINECONE_NAMESPACE_PREFIX`,

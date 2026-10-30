@@ -23,7 +23,7 @@ def create_document(data: KnowledgeDocumentCreate, context=Depends(get_current_w
     try:
         index_record("knowledge_documents", saved, saved["content"], "knowledge_document")
     except Exception as exc:
-        mark_indexing_failed("knowledge_documents", result.inserted_id, exc)
+        mark_indexing_failed("knowledge_documents", saved, exc)
     return serialize_document(get_database().knowledge_documents.find_one({"_id": result.inserted_id}))
 
 

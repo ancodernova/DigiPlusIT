@@ -19,7 +19,7 @@ def index_record(collection: str, record: dict, text: str, source_type: str) -> 
         "source_type": source_type,
         "title": record.get("title"),
         "meeting_id": str(record["meeting_id"]) if record.get("meeting_id") else None,
-        "transcript_id": str(record["transcript_id"]) if record.get("transcript_id") else None,
+        "transcript_id": str(record.get("transcript_id") or record["_id"]) if collection == "transcripts" or record.get("transcript_id") else None,
         "document_id": source_id if collection == "knowledge_documents" else None,
         "task_id": source_id if collection == "tasks" else None,
         "timestamp": str(record.get("created_at")) if record.get("created_at") else None,
@@ -58,7 +58,7 @@ def mark_indexing_failed(collection: str, record: dict, error: Exception) -> Non
         {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc), "error": "Vector indexing failed"},
          "$inc": {"attempts": 1}},
     )
-    logger.error("Vector indexing failed", extra={"collection": collection, "record_id": str(record_id), "error_type": type(error).__name__})
+    logger.error("Vector indexing failed", extra={"collection": collection, "record_id": str(record["_id"]), "error_type": type(error).__name__})
 
 
 def remove_record(collection: str, record: dict) -> None:

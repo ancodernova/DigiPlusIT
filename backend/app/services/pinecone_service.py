@@ -1,12 +1,25 @@
 """Tenant-isolated Pinecone vector service."""
 
-from datetime import datetime
 from hashlib import sha256
 
 from fastapi import HTTPException
 
 from app.config import settings
-from app.services.embedding_service import embed_texts
+DOCUMENT_TITLE_FIELD = "title"
+DOCUMENT_TEXT_FIELD = "chunk_text"
+DOCUMENT_METADATA_FIELDS = (
+    "workspace_id",
+    "meeting_id",
+    "transcript_id",
+    "document_id",
+    "task_id",
+    "source_type",
+    "source_id",
+    "chunk_id",
+    "timestamp",
+    "speaker",
+    "text_reference",
+)
 
 
 def configured() -> bool:
@@ -34,13 +47,17 @@ def check_index_health() -> dict:
     if settings.PINECONE_INDEX_NAME not in indexes:
         return {"connected": False, "exists": False, "index": settings.PINECONE_INDEX_NAME}
     description = client.describe_index(settings.PINECONE_INDEX_NAME)
+    details = description.to_dict() if hasattr(description, "to_dict") else {}
+    embed = details.get("embed", {})
+    schema = details.get("schema", {}).get("fields", {})
     return {
         "connected": True,
         "exists": True,
         "index": settings.PINECONE_INDEX_NAME,
-        "dimension": getattr(description, "dimension", None),
-        "metric": getattr(description, "metric", None),
+        "dimension": getattr(description, "dimension", None) or embed.get("dimension") or schema.get(DOCUMENT_TEXT_FIELD, {}).get("read_parameters", {}).get("dimension"),
+        "metric": getattr(description, "metric", None) or embed.get("metric"),
         "host": bool(getattr(description, "host", None)),
+        "schema_fields": sorted(schema),
     }
 
 
@@ -78,14 +95,23 @@ def chunk_text(text: str, chunk_size: int = 1200, overlap: int = 150) -> list[st
 def upsert_vectors(workspace_id: str, records: list[dict]) -> dict:
     if not records:
         return {"indexed": True, "count": 0}
-    texts = [record["text"] for record in records]
-    vectors = embed_texts(texts)
     payload = []
-    for record, vector in zip(records, vectors):
-        metadata = {key: value for key, value in record.items() if key != "text" and value is not None}
+    for record in records:
+        metadata = {
+            key: value
+            for key, value in record.items()
+            if key in DOCUMENT_METADATA_FIELDS and key not in {"text", "title"} and value is not None
+        }
         metadata["text_reference"] = record["text"][:500]
-        payload.append({"_id": record.get("id") or deterministic_id(workspace_id, str(record.get("source_id", "")), str(record.get("chunk_id", "0"))), "title": record.get("title") or record.get("source_type", "ContextFlow"), "chunk_text": record["text"], **metadata})
-    _index().documents.upsert(documents=payload, namespace=namespace(workspace_id))
+        payload.append({
+            "_id": record.get("id") or deterministic_id(
+                workspace_id, str(record.get("source_id", "")), str(record.get("chunk_id", "0"))
+            ),
+            DOCUMENT_TITLE_FIELD: record.get("title") or record.get("source_type", "ContextFlow"),
+            DOCUMENT_TEXT_FIELD: record["text"],
+            **metadata,
+        })
+    _index().upsert_records(records=payload, namespace=namespace(workspace_id))
     return {"indexed": True, "count": len(payload), "ids": [item["_id"] for item in payload]}
 
 
@@ -101,20 +127,23 @@ def search_vectors(workspace_id: str, vector: list[float], top_k: int = 5) -> li
 
 
 def search_text(workspace_id: str, query: str, top_k: int = 5) -> list[dict]:
-    from pinecone.models.documents.score_by import EmbedQuery
-    result = _index().documents.search(
+    result = _index().search_records(
         namespace=namespace(workspace_id),
-        score_by=[EmbedQuery(query=query, field="chunk_text")],
         top_k=min(max(top_k, 1), 50),
-        include_fields=["title", "chunk_text", "workspace_id", "meeting_id", "transcript_id", "document_id", "task_id", "source_type", "source_id", "chunk_id", "timestamp"],
+        inputs={"text": query},
+        fields=[DOCUMENT_TITLE_FIELD, DOCUMENT_TEXT_FIELD, *DOCUMENT_METADATA_FIELDS],
     )
-    matches = result.get("matches", []) if isinstance(result, dict) else getattr(result, "matches", [])
-    return [match.to_dict() if hasattr(match, "to_dict") else match for match in matches]
+    result_data = result.to_dict() if hasattr(result, "to_dict") else result
+    hits = result_data.get("result", {}).get("hits", []) if isinstance(result_data, dict) else []
+    return [
+        {"_id": hit.get("_id") or hit.get("id"), "_score": hit.get("_score", hit.get("score")), **hit.get("fields", {})}
+        for hit in hits
+    ]
 
 
 def delete_vectors(workspace_id: str, ids: list[str]) -> None:
     if ids:
-        _index().documents.delete(ids=ids, namespace=namespace(workspace_id))
+        _index().delete(ids=ids, namespace=namespace(workspace_id))
 
 
 def update_vectors(workspace_id: str, source_id: str, text: str, metadata: dict) -> dict:
@@ -123,4 +152,4 @@ def update_vectors(workspace_id: str, source_id: str, text: str, metadata: dict)
 
 
 def delete_source_vectors(workspace_id: str, source_id: str) -> None:
-    _index().documents.delete(filter={"source_id": source_id}, namespace=namespace(workspace_id))
+    _index().delete(filter={"source_id": source_id}, namespace=namespace(workspace_id))

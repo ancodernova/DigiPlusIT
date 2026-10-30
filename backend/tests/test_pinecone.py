@@ -18,16 +18,15 @@ def test_chunking_preserves_paragraph_boundaries():
 def test_document_index_upsert_and_search(monkeypatch):
     stored = []
 
-    class Documents:
-        def upsert(self, *, documents, namespace):
-            stored.extend(documents)
+    class Index:
+        def upsert_records(self, *, records, namespace):
+            stored.extend(records)
 
-        def search(self, **kwargs):
-            return SimpleNamespace(matches=[SimpleNamespace(to_dict=lambda: {"_id": stored[0]["_id"], "_score": 0.9, "chunk_text": stored[0]["chunk_text"], "source_id": stored[0]["source_id"]})])
+        def search_records(self, **kwargs):
+            return {"result": {"hits": [{"_id": stored[0]["_id"], "_score": 0.9, "fields": {"chunk_text": stored[0]["chunk_text"], "source_id": stored[0]["source_id"]}}]}}
 
-    fake_index = SimpleNamespace(documents=Documents())
+    fake_index = Index()
     monkeypatch.setattr(pinecone_service, "_index", lambda: fake_index)
-    monkeypatch.setattr(pinecone_service, "embed_texts", lambda texts: [[0.0, 1.0] for _ in texts])
     result = pinecone_service.upsert_vectors("workspace-a", [{"source_id": "doc-1", "chunk_id": "0", "text": "Useful evidence", "source_type": "knowledge"}])
     assert result["count"] == 1
     assert stored[0]["_id"] == pinecone_service.deterministic_id("workspace-a", "doc-1", "0")
